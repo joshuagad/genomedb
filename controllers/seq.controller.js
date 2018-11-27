@@ -16,13 +16,16 @@ exports.test = function(req, res, next) {
 exports.uploadNewSeq = async function(req, res, next) {
   if (req.files == null) res.sendStatus(400);
   else {
+    var metadata = req.body;
+    console.log(req.body);
     var seqFile = req.files.data;
     var localPath = '/tmp/' + Date.now() + '-' + req.files.data.name;
     await seqFile.mv(localPath, function(err) {
       if (err) throw err;
       console.log('File uploaded to '+localPath);
     });
-    await Sequence.create({date_created: Date.now()}, function(err, sequence) {
+    metadata.date_created = Date.now();
+    await Sequence.create(metadata, function(err, sequence) {
       if (err) throw err;
       console.log(sequence);
     });
@@ -30,9 +33,22 @@ exports.uploadNewSeq = async function(req, res, next) {
       if (err) throw err;
       console.log('File deleted from '+localPath);
     });
-    //fasta.obj(localPath).on('data', console.log);
-    res.end();
+    res.json(metadata);
   }
+};
+
+exports.dropSeqDB = async function(req, res, next) {
+  await Sequence.collection.drop(function(err) {
+    if (err) throw err;
+    console.log('Dropped sequence database');
+  });
+  res.end();
+};
+
+exports.getSeqList = function(req, res, next) {
+  Sequence.find({}).sort({'organism': 1}).limit(10).exec(function(err, seqs) {
+    res.json(seqs);
+  })
 };
 
 exports.getSeqMetadataByID = function(req, res, next) {
