@@ -1,3 +1,4 @@
+var request = require('request');
 var fs = require('fs');
 var fasta = require('bionode-fasta');
 var mongoose = require('mongoose');
@@ -17,17 +18,29 @@ exports.uploadNewSeq = async function(req, res, next) {
   if (req.files == null) res.sendStatus(400);
   else {
     var metadata = req.body;
-    console.log(req.body);
-    var seqFile = req.files.data;
-    var localPath = '/tmp/' + Date.now() + '-' + req.files.data.name;
+    var seqFile = req.files.sequence;
+    var localPath = '/tmp/' + Date.now() + '-' + req.files.sequence.name;
     await seqFile.mv(localPath, function(err) {
       if (err) throw err;
       console.log('File uploaded to '+localPath);
     });
     metadata.date_created = Date.now();
-    await Sequence.create(metadata, function(err, sequence) {
+    var entry = await new Promise(resolve => {
+      Sequence.create(metadata, function(err, sequence) {
+        if (err) throw err;
+        resolve(sequence);
+      });
+    });
+    entry.data = fs.createReadStream(localPath);
+    await request.post({
+      url: 'http://10.227.203.93:4000/api/v1/sequence',
+      formData: {
+        sequence: fs.createReadStream(localPath),
+        metadata: JSON.stringify(entry)
+      }
+    }, function(err) {
       if (err) throw err;
-      console.log(sequence);
+      console.log('File uploaded to 10.227.203.93');
     });
     await fs.unlink(localPath, function(err) {
       if (err) throw err;
@@ -56,6 +69,10 @@ exports.getSeqMetadataByID = function(req, res, next) {
     if (err) throw err;
     res.json(sequence);
   });
+};
+
+exports.getSeqFastaByID = function(req, res, next) {
+  res.redirect("https://mbb.pregi.net/local/v1/sequence/"+req.params.id+"/fasta");
 };
 
 exports.deleteSeqByID = function(req, res, next) {
