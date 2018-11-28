@@ -6,14 +6,6 @@ mongoose.connect('mongodb://mongo/genomedb', {useNewUrlParser: true});
 
 var Sequence = require('../models/sequence.model.js');
 
-exports.test = function(req, res, next) {
-  Sequence.find({}, function(err, result) {
-    if (err) throw err;
-    console.log(result);
-    res.json(result);
-  });
-};
-
 exports.uploadNewSeq = async function(req, res, next) {
   if (req.files == null) res.sendStatus(400);
   else {
@@ -59,7 +51,7 @@ exports.dropSeqDB = async function(req, res, next) {
 };
 
 exports.getSeqList = function(req, res, next) {
-  Sequence.find({}).sort({'organism': 1}).limit(10).exec(function(err, seqs) {
+  Sequence.find({}).sort({'organism': 1}).limit(30).exec(function(err, seqs) {
     res.json(seqs);
   })
 };
